@@ -41,22 +41,62 @@ const url = require('url');
 
 ////////////////////////////
 /// SERVER
+const replaceTemplate = (temp, product) => {
+    // Nhận vào temp: 1 chuỗi HTML thay thế thông tin sản phẩm
+            //product: một object để chứa thông tin sản phẩm
+            
+    let output = temp.replace(/{%PRODUCTNAME%}/g, product.productName);
+        // replace(): 
+        //temp: lấy chuỗi temp và thay thế tất cả các ký hiệu {%PRODUCTNAME%} 
+        //      trong đó bằng giá trị product.productName.
+        // Biểu thức chính quy /g được sử dụng để tìm và thay thế tất cả 
+        // các lần xuất hiện của ký hiệu, không chỉ một lần
+    output = output.replace(/{%IMAGE%}/g, product.image);
+    output = output.replace(/{%PRICE%}/g, product.price);
+    output = output.replace(/{%FROM%}/g, product.from);
+    output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
+    output = output.replace(/{%QUANTITY%}/g, product.quantity);
+    output = output.replace(/{%DESCRIPTION%}/g, product.description);
+    output = output.replace(/{%ID%}/g, product.id);
+
+    if (!product.organic) output = output.replace(/{%NOT_ORGANIC%}/g, 'not-organic');
+    return output;
+}
+
+const tempOverview = fs.readFileSync(`${__dirname}/templates/template-overview.html`, 'utf-8');
+const tempCard = fs.readFileSync(`${__dirname}/templates/template-card.html`, 'utf-8');
+const tempProduct = fs.readFileSync(`${__dirname}/templates/template-product.html`, 'utf-8');
+
 
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
 const dataObj = JSON.parse(data); // Chuỗi JSON được chuyển thành 1 Oject trong JS
 
 const server = http.createServer((req, res) => {
     const pathName = req.url
-
+    // Overview Page
     if (pathName === '/' || pathName === '/overview') {
-        res.end('This is OVERVIEW');
+        res.writeHead(200, { 'Content-type': 'text/html' }); // thiết lập header HTTP để chỉ định rằng nội dung trả về là HTML.
+        const cardHtml = dataObj.map(el => replaceTemplate(tempCard, el)).join('');
+        // dataObj.map: duyệt qua dữ liệu trong file api
+        // lấy ra các phần tử trả về hàm  replaceTemplate
+        // lúc này temp = tempCard, product = phần tử đã duyệt 
+        //join('') gom thành 1 chuoix HTML hoàn chỉnh vì map trả về mảng
+        const output = tempOverview.replace('{%PRODUCT_CARD%}', cardHtml);
+        // console.log(cardHtml);
+
+        res.end(output);
+
+        // Product page    
     } else if (pathName === '/product') {
         res.end('This is PRODUCT');
+        //API
     } else if (pathName === '/api') {
         res.writeHead(200, {
             'content-type': 'application/json'
         });
         res.end(data);
+
+        //Not found
     } else {
         res.writeHead(404, { // thiết lập các header của phẩn hồi http
             'Content-type': 'text/html',
